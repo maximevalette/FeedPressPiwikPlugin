@@ -20,6 +20,7 @@ use Piwik\ViewDataTable;
 use Piwik\DataTable;
 use Piwik\Period;
 use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Evolution;
+use Piwik\Http;
 
 /**
  *
@@ -106,10 +107,10 @@ class Controller extends \Piwik\Plugin\Controller
 	{
 
 		$view = ViewDataTable\Factory::build(
-             Evolution::ID,
-			'FeedPress.getSubscribers',
-			'FeedPress.getSubscribersGraph'
-        );
+		                             Evolution::ID,
+			                             'FeedPress.getSubscribers',
+			                             'FeedPress.getSubscribersGraph'
+		);
 
 		$view->config->show_limit_control = false;
 		$view->config->show_search = false;
@@ -195,17 +196,8 @@ class Controller extends \Piwik\Plugin\Controller
 			)
 		);
 
-		$ch = curl_init();
+		$data = Http::sendHttpRequest('http://api.feedpress.it/' . $url . '.json?' . http_build_query($args), 5, 'FeedPress Piwik Plugin/1.0.1 (+http://www.feedpress.it)');
 
-		curl_setopt($ch, CURLOPT_HEADER, false);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-		curl_setopt($ch, CURLOPT_USERAGENT, "FeedPress Piwik Plugin/0.1 (+http://www.feedpress.it)");
-		curl_setopt($ch, CURLOPT_POST, false);
-		curl_setopt($ch, CURLOPT_URL, 'http://api.feedpress.it/' . $url . '.json?' . http_build_query($args));
-
-		$data = curl_exec($ch);
 		$json = json_decode($data, true);
 
 		return $json;

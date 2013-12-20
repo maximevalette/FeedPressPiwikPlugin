@@ -35,11 +35,17 @@ class API extends \Piwik\Plugin\API
 
 		foreach ($period->getSubperiods() as $subPeriod) {
 
+			$subscribers = 0;
+
+			if (isset($json['stats'][9 - $i]['greader']) && isset($json['stats'][9 - $i]['newsletter'])) {
+				$subscribers = $json['stats'][9 - $i]['greader'] + $json['stats'][9 - $i]['newsletter'];
+			}
+
 			$dataTable = new DataTable();
 
 			$dataTable->addRow(new Row(
 					array(
-						Row::COLUMNS => array('subscribers' => $json['stats'][9 - $i]['greader'] + $json['stats'][9 - $i]['newsletter']),
+						Row::COLUMNS => array('subscribers' => $subscribers),
 					)
 				)
 			);
