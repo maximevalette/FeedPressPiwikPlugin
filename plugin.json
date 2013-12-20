@@ -1,0 +1,18 @@
+{
+    "name": "FeedPress",
+    "version": "1.0.0",
+    "description": "Displays your FeedPress feed analytics.",
+    "keywords": ["feedpress", "feed", "widget", "rss", "subscribers"],
+    "homepage": "https://feedpress.it",
+    "license": "GPL v3+",
+    "authors": [
+        {
+            "name": "Maxime VALETTE",
+            "email": "support@feedpress.it",
+            "homepage": "http://feedpress.it"
+        }
+    ],
+    "donate": {
+        "bitcoin": "1BNfZ11Hddu9FzrxQEhp9ZE5Gx72uv7J5g"
+    }
+}
