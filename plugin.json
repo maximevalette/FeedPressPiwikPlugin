@@ -1,6 +1,6 @@
 {
     "name": "FeedPress",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Displays your FeedPress feed analytics.",
     "keywords": ["feedpress", "feed", "widget", "rss", "subscribers"],
     "homepage": "https://feedpress.it",

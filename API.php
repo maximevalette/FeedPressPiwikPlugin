@@ -29,7 +29,7 @@ class API extends \Piwik\Plugin\API
 		$fC = new Controller();
 		$json = $fC->apiCall('feeds/subscribers', array('feed' => Option::get('FeedPress.feedId.' . Common::getRequestVar('idSite'))));
 
-		$period = Period\Range::factory('day', 'last10');
+        $period = Period\Factory::build('day', 'last10');
 		$i = 0;
 		$map = new Map();
 

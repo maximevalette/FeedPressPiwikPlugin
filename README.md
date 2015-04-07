@@ -6,6 +6,10 @@ This plugin displays your subscribers analytics from FeedPress directly into you
 
 ## Changelog
 
+### 1.0.2
+
+- Removed deprecated Period::factory()
+
 ### 1.0.1
 
 - Using Piwik\Http instead of cURL.
