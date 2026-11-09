@@ -1,6 +1,7 @@
 {
     "FeedPress": {
-        "PluginDescription": "FeedPress is a feed subscribers analytics tool. See your feed subscribers in a simple Piwik widget.",
+        "PluginDescription": "FeedPress is a feed subscribers analytics tool. See your feed subscribers in a simple Matomo widget.",
+        "WidgetName": "FeedPress Subscribers",
         "LogoutLink": "Logout",
         "LoginLink": "Login to FeedPress",
         "GraphDetails": "FeedPress feed subscribers for /%s",

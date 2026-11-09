@@ -1,12 +1,9 @@
 <?php
 /**
- * FeedPress Piwik Plugin
+ * FeedPress Matomo Plugin
  *
- * @link http://feedpress.it
+ * @link https://feedpress.com
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- *
- * @category Piwik_Plugins
- * @package Piwik_FeedPress
  */
 namespace Piwik\Plugins\FeedPress;
 
@@ -18,10 +15,7 @@ use Piwik\Piwik;
 use Piwik\Nonce;
 use Piwik\SettingsPiwik;
 use Piwik\ViewDataTable;
-use Piwik\DataTable;
-use Piwik\Period;
 use Piwik\Plugins\CoreVisualizations\Visualizations\JqplotGraph\Evolution;
-use Piwik\Http;
 
 /**
  *
@@ -29,10 +23,6 @@ use Piwik\Http;
  */
 class Controller extends \Piwik\Plugin\Controller
 {
-
-	const API_URL = 'https://api.feedpress.com/';
-
-	const API_KEY = '51fe20f0a90b5';
 
 	/**
 	 * Lifetime of the signed state used for the saveToken callback. The user
@@ -58,7 +48,7 @@ class Controller extends \Piwik\Plugin\Controller
 				// Only website admins can pick the feed to display.
 				Piwik::checkUserHasAdminAccess($idSite);
 
-				$json = $this->apiCall($idSite, 'account');
+				$json = FeedPressClient::call($idSite, 'account');
 
 				if (empty($json['feeds']) || !is_array($json['feeds'])) {
 
@@ -122,7 +112,7 @@ class Controller extends \Piwik\Plugin\Controller
 			));
 
 			$args = array(
-				'callback' => self::API_KEY,
+				'callback' => FeedPressClient::API_KEY,
 				'next' => $next
 			);
 
@@ -134,11 +124,8 @@ class Controller extends \Piwik\Plugin\Controller
 
 	}
 
-	function echoSubscribersGraph()
+	private function echoSubscribersGraph()
 	{
-
-		/*$view = ViewDataTable\Factory::build('table', 'FeedPress.getSubscribersEvolution', __FUNCTION__);
-		$view->config->translations['subscribers'] = Piwik::translate('FeedPress_Subscribers');*/
 
 		$view = new View('@FeedPress/index');
 		$this->setPeriodVariablesView($view);
@@ -172,16 +159,16 @@ class Controller extends \Piwik\Plugin\Controller
 		$view->config->show_pagination_control = false;
 		$view->requestConfig->filter_limit = 10;
 		$view->config->max_graph_elements = false;
-		$view->config->show_line_graph = true;
 		$view->config->show_tag_cloud = false;
 		$view->config->show_pie_chart = false;
 		$view->config->show_table = false;
 		$view->config->show_series_picker = false;
 		$view->config->hide_annotations_view = true;
 
-		$graphDetails = Piwik::translate('FeedPress_GraphDetails', array(self::escape(Option::get('FeedPress.feedId.' . $idSite))));
+		$feedId = Option::get('FeedPress.feedId.' . $idSite);
 
-		$footer = '<p style="text-align: right; font-size: 10px; font-style: italic;">' . $graphDetails;
+		// The footer is rendered as raw HTML, the title is escaped by Twig.
+		$footer = '<p style="text-align: right; font-size: 10px; font-style: italic;">' . Piwik::translate('FeedPress_GraphDetails', array(self::escape($feedId)));
 
 		if (Piwik::isUserHasAdminAccess($idSite)) {
 
@@ -199,7 +186,7 @@ class Controller extends \Piwik\Plugin\Controller
 		$footer .= '</p>';
 
 		$view->config->show_footer_message = $footer;
-		$view->config->title = $graphDetails;
+		$view->config->title = Piwik::translate('FeedPress_GraphDetails', array($feedId));
 
 		$view->config->addTranslation('subscribers', Piwik::translate('FeedPress_Subscribers'));
 
@@ -223,8 +210,7 @@ class Controller extends \Piwik\Plugin\Controller
 
 		}
 
-		header('Location: ' . SettingsPiwik::getPiwikUrl());
-		exit;
+		Url::redirectToUrl(SettingsPiwik::getPiwikUrl());
 
 	}
 
@@ -244,8 +230,7 @@ class Controller extends \Piwik\Plugin\Controller
 
 		}
 
-		header('Location: ' . SettingsPiwik::getPiwikUrl());
-		exit;
+		Url::redirectToUrl(SettingsPiwik::getPiwikUrl());
 
 	}
 
@@ -260,47 +245,7 @@ class Controller extends \Piwik\Plugin\Controller
 		Option::delete('FeedPress.token.' . $idSite);
 		Option::delete('FeedPress.feedId.' . $idSite);
 
-		header('Location: ' . SettingsPiwik::getPiwikUrl());
-		exit;
-
-	}
-
-	/**
-	 * Calls the FeedPress API.
-	 *
-	 * Returns the decoded JSON, or null on any transport or decoding error.
-	 * The underlying error is never sent back to the caller.
-	 */
-	function apiCall($idSite, $url, $args=array())
-	{
-
-		$token = Option::get('FeedPress.token.' . (int) $idSite);
-
-		if (empty($token)) {
-
-			return null;
-
-		}
-
-		$args = array_merge($args, array(
-				'key' => self::API_KEY,
-				'token' => $token
-			)
-		);
-
-		try {
-
-			$data = Http::sendHttpRequest(self::API_URL . $url . '.json?' . http_build_query($args), 5, 'FeedPress Piwik Plugin/1.0.3 (+https://feedpress.com)');
-
-		} catch (\Exception $e) {
-
-			return null;
-
-		}
-
-		$json = json_decode($data, true);
-
-		return is_array($json) ? $json : null;
+		Url::redirectToUrl(SettingsPiwik::getPiwikUrl());
 
 	}
 

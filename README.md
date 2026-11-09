@@ -1,10 +1,17 @@
-# FeedPress Piwik Plugin
+# FeedPress Matomo Plugin
 
 ## Description
 
-This plugin displays your subscribers analytics from FeedPress directly into your Piwik dashboard.
+This plugin displays your subscribers analytics from FeedPress directly into your Matomo dashboard.
+
+Requires Matomo 5 or 6. Connecting a FeedPress account requires admin access to the website; the widget is visible to users with view access.
 
 ## Changelog
+
+### 2.0.0
+
+- Ported to Matomo 5 and 6 (the plugin previously required Piwik 2.x).
+- Includes the security fixes of 1.0.3.
 
 ### 1.0.3
 

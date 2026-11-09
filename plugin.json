@@ -1,17 +1,20 @@
 {
     "name": "FeedPress",
-    "version": "1.0.3",
+    "version": "2.0.0",
     "description": "Displays your FeedPress feed analytics.",
     "keywords": ["feedpress", "feed", "widget", "rss", "subscribers"],
-    "homepage": "https://feedpress.it",
+    "homepage": "https://feedpress.com",
     "license": "GPL v3+",
     "authors": [
         {
             "name": "Maxime VALETTE",
             "email": "support@feedpress.it",
-            "homepage": "http://feedpress.it"
+            "homepage": "https://feedpress.com"
         }
     ],
+    "require": {
+        "matomo": ">=5.0.0,<7.0.0-b1"
+    },
     "donate": {
         "bitcoin": "1BNfZ11Hddu9FzrxQEhp9ZE5Gx72uv7J5g"
     }
