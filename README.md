@@ -6,6 +6,13 @@ This plugin displays your subscribers analytics from FeedPress directly into you
 
 ## Changelog
 
+### 1.0.3
+
+- Security: the `FeedPress.getSubscribers` API and the widget now require view access to the website (they were reachable anonymously).
+- Security: connecting, selecting a feed and logging out now require admin access to the website and are protected against CSRF.
+- Security: FeedPress API errors are no longer passed back to the caller, and feed names are escaped before display.
+- Use the current FeedPress API endpoint over HTTPS (`https://api.feedpress.com`).
+
 ### 1.0.2
 
 - Removed deprecated Period::factory()

@@ -14,6 +14,7 @@ use Piwik\Date;
 use Piwik\View;
 use Piwik\Option;
 use Piwik\Common;
+use Piwik\Piwik;
 use Piwik\ViewDataTable;
 use Piwik\DataTable;
 use Piwik\Period;
@@ -23,11 +24,16 @@ use Piwik\Period\Day;
 
 class API extends \Piwik\Plugin\API
 {
-	public function getSubscribers()
+	public function getSubscribers($idSite)
 	{
 
+		$idSite = (int) $idSite;
+
+		// Subscriber stats are only for users who can view this website.
+		Piwik::checkUserHasViewAccess($idSite);
+
 		$fC = new Controller();
-		$json = $fC->apiCall('feeds/subscribers', array('feed' => Option::get('FeedPress.feedId.' . Common::getRequestVar('idSite'))));
+		$json = $fC->apiCall($idSite, 'feeds/subscribers', array('feed' => Option::get('FeedPress.feedId.' . $idSite)));
 
         $period = Period\Factory::build('day', 'last10');
 		$i = 0;

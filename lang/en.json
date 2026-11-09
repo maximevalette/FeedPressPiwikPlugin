@@ -4,6 +4,7 @@
         "LogoutLink": "Logout",
         "LoginLink": "Login to FeedPress",
         "GraphDetails": "FeedPress feed subscribers for /%s",
-        "Subscribers": "Feed subscribers"
+        "Subscribers": "Feed subscribers",
+        "ApiError": "Unable to retrieve your FeedPress feeds. Please try again later."
     }
 }

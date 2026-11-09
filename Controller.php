@@ -15,6 +15,7 @@ use Piwik\Option;
 use Piwik\Common;
 use Piwik\Url;
 use Piwik\Piwik;
+use Piwik\Nonce;
 use Piwik\SettingsPiwik;
 use Piwik\ViewDataTable;
 use Piwik\DataTable;
@@ -29,28 +30,51 @@ use Piwik\Http;
 class Controller extends \Piwik\Plugin\Controller
 {
 
+	const API_URL = 'https://api.feedpress.com/';
+
+	const API_KEY = '51fe20f0a90b5';
+
+	/**
+	 * Lifetime of the signed state used for the saveToken callback. The user
+	 * logs in on feedpress.it in between, so it must outlive a form nonce.
+	 */
+	const SAVE_TOKEN_STATE_TTL = 3600;
+
 	public function subscribersWidget()
 	{
 
-		if ($token = Option::get('FeedPress.token.' . Common::getRequestVar('idSite'))) {
+		$idSite = $this->getIdSite();
 
-			if ($feedId = Option::get('FeedPress.feedId.' . Common::getRequestVar('idSite'))) {
+		Piwik::checkUserHasViewAccess($idSite);
+
+		if ($token = Option::get('FeedPress.token.' . $idSite)) {
+
+			if ($feedId = Option::get('FeedPress.feedId.' . $idSite)) {
 
 				return $this->echoSubscribersGraph();
 
 			} else {
 
-				// sélection du feed form get action
+				// Only website admins can pick the feed to display.
+				Piwik::checkUserHasAdminAccess($idSite);
 
-				$json = $this->apiCall('account');
+				$json = $this->apiCall($idSite, 'account');
+
+				if (empty($json['feeds']) || !is_array($json['feeds'])) {
+
+					return '<p style="padding: 1em; text-align: center;">' . Piwik::translate('FeedPress_ApiError') . '</p>';
+
+				}
 
 				if (count($json['feeds']) == 1) {
 
-					Option::set('FeedPress.feedId.' . Common::getRequestVar('idSite'), $json['feeds'][0]['name'], 1);
+					Option::set('FeedPress.feedId.' . $idSite, $json['feeds'][0]['name'], 1);
 
 					return $this->echoSubscribersGraph();
 
 				} else {
+
+					$nonce = Nonce::getNonce(self::getNonceId('saveFeedId', $idSite));
 
 					$html = '<div style="padding: 1em;">';
 					$html .= '<p>Select the feed to display:</p>';
@@ -59,7 +83,15 @@ class Controller extends \Piwik\Plugin\Controller
 
 					foreach ($json['feeds'] as $feed) {
 
-						$html .= '<li><a href="?module=FeedPress&action=saveFeedId&idSite=' . Common::getRequestVar('idSite', 1, 'int') . '&feedId=' . $feed['name'] . '">/' . $feed['name'] . '</a> (' . $feed['subscribers'] . ' subscribers)</li>';
+						$url = '?' . http_build_query(array(
+							'module' => 'FeedPress',
+							'action' => 'saveFeedId',
+							'idSite' => $idSite,
+							'feedId' => $feed['name'],
+							'nonce'  => $nonce,
+						));
+
+						$html .= '<li><a href="' . self::escape($url) . '">/' . self::escape($feed['name']) . '</a> (' . (int) $feed['subscribers'] . ' subscribers)</li>';
 
 					}
 
@@ -75,12 +107,26 @@ class Controller extends \Piwik\Plugin\Controller
 
 		} else {
 
+			// Only website admins can connect a FeedPress account.
+			if (!Piwik::isUserHasAdminAccess($idSite)) {
+
+				return '';
+
+			}
+
+			$next = Url::getCurrentUrlWithoutQueryString() . '?' . http_build_query(array(
+				'module' => 'FeedPress',
+				'action' => 'saveToken',
+				'idSite' => $idSite,
+				'state'  => self::buildState($idSite, time()),
+			));
+
 			$args = array(
-				'callback' => '51fe20f0a90b5',
-				'next' => Url::getCurrentUrlWithoutQueryString() . '?module=FeedPress&action=saveToken&idSite=' . Common::getRequestVar('idSite', 1, 'int')
+				'callback' => self::API_KEY,
+				'next' => $next
 			);
 
-			$html = '<p style="padding: 1em; text-align: center;"><a href="https://feedpress.it/auth?' . http_build_query($args) . '">' . Piwik::translate('FeedPress_LoginLink') . '</a></p>';
+			$html = '<p style="padding: 1em; text-align: center;"><a href="' . self::escape('https://feedpress.it/auth?' . http_build_query($args)) . '">' . Piwik::translate('FeedPress_LoginLink') . '</a></p>';
 
 			return $html;
 
@@ -106,6 +152,10 @@ class Controller extends \Piwik\Plugin\Controller
 	function getSubscribersGraph()
 	{
 
+		$idSite = $this->getIdSite();
+
+		Piwik::checkUserHasViewAccess($idSite);
+
 		$view = ViewDataTable\Factory::build(
 		                             Evolution::ID,
 			                             'FeedPress.getSubscribers',
@@ -129,8 +179,27 @@ class Controller extends \Piwik\Plugin\Controller
 		$view->config->show_series_picker = false;
 		$view->config->hide_annotations_view = true;
 
-		$view->config->show_footer_message = '<p style="text-align: right; font-size: 10px; font-style: italic;">' . Piwik::translate('FeedPress_GraphDetails', array(Option::get('FeedPress.feedId.' . Common::getRequestVar('idSite')))) . ' — <a href="?module=FeedPress&action=deleteToken&idSite=' . Common::getRequestVar('idSite', 1, 'int') . '">' . Piwik::translate('FeedPress_LogoutLink') .'</a></p>';
-		$view->config->title = Piwik::translate('FeedPress_GraphDetails', array(Option::get('FeedPress.feedId.' . Common::getRequestVar('idSite'))));
+		$graphDetails = Piwik::translate('FeedPress_GraphDetails', array(self::escape(Option::get('FeedPress.feedId.' . $idSite))));
+
+		$footer = '<p style="text-align: right; font-size: 10px; font-style: italic;">' . $graphDetails;
+
+		if (Piwik::isUserHasAdminAccess($idSite)) {
+
+			$logoutUrl = '?' . http_build_query(array(
+				'module' => 'FeedPress',
+				'action' => 'deleteToken',
+				'idSite' => $idSite,
+				'nonce'  => Nonce::getNonce(self::getNonceId('deleteToken', $idSite)),
+			));
+
+			$footer .= ' — <a href="' . self::escape($logoutUrl) . '">' . Piwik::translate('FeedPress_LogoutLink') . '</a>';
+
+		}
+
+		$footer .= '</p>';
+
+		$view->config->show_footer_message = $footer;
+		$view->config->title = $graphDetails;
 
 		$view->config->addTranslation('subscribers', Piwik::translate('FeedPress_Subscribers'));
 
@@ -141,11 +210,16 @@ class Controller extends \Piwik\Plugin\Controller
 	function saveToken()
 	{
 
+		$idSite = $this->getIdSite();
+
+		Piwik::checkUserHasAdminAccess($idSite);
+		$this->checkState($idSite);
+
 		$token = Common::getRequestVar('token', '', 'string');
 
-		if (Piwik::getCurrentUserLogin() != 'anonymous') {
+		if ($token !== '') {
 
-			Option::set('FeedPress.token.' . Common::getRequestVar('idSite'), $token, 1);
+			Option::set('FeedPress.token.' . $idSite, $token, 1);
 
 		}
 
@@ -157,11 +231,16 @@ class Controller extends \Piwik\Plugin\Controller
 	function saveFeedId()
 	{
 
+		$idSite = $this->getIdSite();
+
+		Piwik::checkUserHasAdminAccess($idSite);
+		$this->checkNonce('saveFeedId', $idSite);
+
 		$feedId = Common::getRequestVar('feedId', '', 'string');
 
-		if (Piwik::getCurrentUserLogin() != 'anonymous') {
+		if ($feedId !== '') {
 
-			Option::set('FeedPress.feedId.' . Common::getRequestVar('idSite'), $feedId, 1);
+			Option::set('FeedPress.feedId.' . $idSite, $feedId, 1);
 
 		}
 
@@ -173,34 +252,154 @@ class Controller extends \Piwik\Plugin\Controller
 	function deleteToken()
 	{
 
-		if (Piwik::getCurrentUserLogin() != 'anonymous') {
+		$idSite = $this->getIdSite();
 
-			Option::delete('FeedPress.token.' . Common::getRequestVar('idSite'));
-			Option::delete('FeedPress.feedId.' . Common::getRequestVar('idSite'));
+		Piwik::checkUserHasAdminAccess($idSite);
+		$this->checkNonce('deleteToken', $idSite);
 
-		}
+		Option::delete('FeedPress.token.' . $idSite);
+		Option::delete('FeedPress.feedId.' . $idSite);
 
 		header('Location: ' . SettingsPiwik::getPiwikUrl());
 		exit;
 
 	}
 
-	function apiCall($url, $args=array())
+	/**
+	 * Calls the FeedPress API.
+	 *
+	 * Returns the decoded JSON, or null on any transport or decoding error.
+	 * The underlying error is never sent back to the caller.
+	 */
+	function apiCall($idSite, $url, $args=array())
 	{
 
-		$token = Option::get('FeedPress.token.' . Common::getRequestVar('idSite'));
+		$token = Option::get('FeedPress.token.' . (int) $idSite);
+
+		if (empty($token)) {
+
+			return null;
+
+		}
 
 		$args = array_merge($args, array(
-				'key' => '51fe20f0a90b5',
+				'key' => self::API_KEY,
 				'token' => $token
 			)
 		);
 
-		$data = Http::sendHttpRequest('http://api.feedpress.it/' . $url . '.json?' . http_build_query($args), 5, 'FeedPress Piwik Plugin/1.0.1 (+http://www.feedpress.it)');
+		try {
+
+			$data = Http::sendHttpRequest(self::API_URL . $url . '.json?' . http_build_query($args), 5, 'FeedPress Piwik Plugin/1.0.3 (+https://feedpress.com)');
+
+		} catch (\Exception $e) {
+
+			return null;
+
+		}
 
 		$json = json_decode($data, true);
 
-		return $json;
+		return is_array($json) ? $json : null;
+
+	}
+
+	private function getIdSite()
+	{
+
+		return Common::getRequestVar('idSite', 1, 'int');
+
+	}
+
+	private function checkNonce($action, $idSite)
+	{
+
+		$nonceId = self::getNonceId($action, $idSite);
+		$nonce = Common::getRequestVar('nonce', '', 'string');
+
+		if (!Nonce::verifyNonce($nonceId, $nonce)) {
+
+			throw new \Exception('Invalid or expired request, please try again.');
+
+		}
+
+		Nonce::discardNonce($nonceId);
+
+	}
+
+	/**
+	 * Piwik\Nonce rejects requests whose referrer is not local, which is always
+	 * the case when coming back from feedpress.it. The saveToken callback is
+	 * protected with a state bound to the user, the website and the instance
+	 * salt instead.
+	 */
+	private static function buildState($idSite, $timestamp)
+	{
+
+		$payload = Piwik::getCurrentUserLogin() . '|' . (int) $idSite . '|' . (int) $timestamp;
+
+		return (int) $timestamp . '.' . hash_hmac('sha256', $payload, 'FeedPress.saveToken.' . SettingsPiwik::getSalt());
+
+	}
+
+	private function checkState($idSite)
+	{
+
+		$state = Common::getRequestVar('state', '', 'string');
+		$parts = explode('.', $state, 2);
+		$timestamp = (int) $parts[0];
+
+		$valid = count($parts) == 2
+			&& $timestamp > time() - self::SAVE_TOKEN_STATE_TTL
+			&& $timestamp <= time()
+			&& self::safeEquals(self::buildState($idSite, $timestamp), $state);
+
+		if (!$valid) {
+
+			throw new \Exception('Invalid or expired request, please try again.');
+
+		}
+
+	}
+
+	private static function safeEquals($known, $user)
+	{
+
+		if (function_exists('hash_equals')) {
+
+			return hash_equals($known, $user);
+
+		}
+
+		if (strlen($known) !== strlen($user)) {
+
+			return false;
+
+		}
+
+		$result = 0;
+
+		for ($i = 0; $i < strlen($known); $i++) {
+
+			$result |= ord($known[$i]) ^ ord($user[$i]);
+
+		}
+
+		return $result === 0;
+
+	}
+
+	private static function getNonceId($action, $idSite)
+	{
+
+		return 'FeedPress.' . $action . '.' . (int) $idSite;
+
+	}
+
+	private static function escape($value)
+	{
+
+		return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
 	}
 
