@@ -11,7 +11,7 @@ Requires Matomo 5 or 6. Connecting a FeedPress account requires admin access to 
 ### 2.0.0
 
 - Ported to Matomo 5 and 6 (the plugin previously required Piwik 2.x).
-- Includes the security fixes of 1.0.3.
+- Includes the security fixes of 1.0.3, reported by ipankwave88. Thanks!
 
 ### 1.0.3
 
