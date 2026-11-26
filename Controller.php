@@ -297,40 +297,13 @@ class Controller extends \Piwik\Plugin\Controller
 		$valid = count($parts) == 2
 			&& $timestamp > time() - self::SAVE_TOKEN_STATE_TTL
 			&& $timestamp <= time()
-			&& self::safeEquals(self::buildState($idSite, $timestamp), $state);
+			&& hash_equals(self::buildState($idSite, $timestamp), $state);
 
 		if (!$valid) {
 
 			throw new \Exception('Invalid or expired request, please try again.');
 
 		}
-
-	}
-
-	private static function safeEquals($known, $user)
-	{
-
-		if (function_exists('hash_equals')) {
-
-			return hash_equals($known, $user);
-
-		}
-
-		if (strlen($known) !== strlen($user)) {
-
-			return false;
-
-		}
-
-		$result = 0;
-
-		for ($i = 0; $i < strlen($known); $i++) {
-
-			$result |= ord($known[$i]) ^ ord($user[$i]);
-
-		}
-
-		return $result === 0;
 
 	}
 
