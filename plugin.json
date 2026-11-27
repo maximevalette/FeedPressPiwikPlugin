@@ -1,6 +1,6 @@
 {
     "name": "FeedPress",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "description": "Displays your FeedPress feed analytics.",
     "keywords": ["feedpress", "feed", "widget", "rss", "subscribers"],
     "homepage": "https://feedpress.com",
@@ -13,7 +13,7 @@
         }
     ],
     "require": {
-        "matomo": ">=5.0.0,<7.0.0-b1"
+        "matomo": ">=5.0.0-b1,<6.0.0-b1"
     },
     "donate": {
         "bitcoin": "1BNfZ11Hddu9FzrxQEhp9ZE5Gx72uv7J5g"

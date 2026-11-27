@@ -4,9 +4,13 @@
 
 This plugin displays your subscribers analytics from FeedPress directly into your Matomo dashboard.
 
-Requires Matomo 5 or 6. Connecting a FeedPress account requires admin access to the website; the widget is visible to users with view access.
+Requires Matomo 5. Use the 3.x versions (`6.x-dev` branch) for Matomo 6. Connecting a FeedPress account requires admin access to the website; the widget is visible to users with view access.
 
 ## Changelog
+
+### 2.0.1
+
+- Matomo 5 only: the Marketplace no longer accepts a version declaring both Matomo 5 and 6. Matomo 6 users get 3.x.
 
 ### 2.0.0
 

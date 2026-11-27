@@ -52,7 +52,7 @@ class FeedPressClient
             $data = Http::sendHttpRequest(
                 self::API_URL . $endpoint . '.json?' . http_build_query($args),
                 5,
-                'FeedPress Matomo Plugin/2.0.0 (+https://feedpress.com)'
+                'FeedPress Matomo Plugin/2.0.1 (+https://feedpress.com)'
             );
         } catch (\Exception $e) {
             return null;
